@@ -1,0 +1,211 @@
+---
+title: "IMC_R_Spanish"
+author: "JMason88"
+date: "14 de abril de 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Algunos temas introductorios de R
+
+##Matrices y aplicar funciones a los elementos de una matriz
+
+```{r matriz}
+mat <- matrix(1:9, nrow = 3, ncol = 3)
+print(mat)
+
+sum2 <- apply(mat, 2, sum)
+print(sum2)
+```
+
+##Generacion de Dataframes
+
+```{r Dataframe}
+nombre <- c('Ana','Juan','Pedro')
+edad <- c(23,50,30)
+sexo <- as.factor(c('F','M','F'))
+
+datos <- data.frame(nombre,edad,sexo)
+
+print(datos)
+print(mean(datos$edad[datos$sexo=='F']))
+
+```
+
+##Funciones en R
+
+```{r Funciones}
+a <- function(x) {5*x+3}
+
+a(10)
+
+```
+## Para abrir el archivo hay que instalar el paquete readxl y cargar la libreria
+```{r IMCInfantil}
+library(readxl)
+
+IMC <- read_excel('C:\\Users\\Administrador\\Desktop\\Clase AID\\IMCinfantil.xlsx')
+print(IMC)
+
+```
+## Summary del dataframe
+```{r}
+summary(IMC)
+```
+## Como seleccionar las variables del Dataframe
+```{r}
+IMC$EDAD #devuelve los datos de la variable por su nombre
+IMC[,2] #devuelve los datos de la variable por su posición
+```
+## ANALISIS DE FRECUENCIAS
+####Frecuencias para categoria sexo
+```{r}
+a <- table(IMC$SEXO) #Devuelve las frecuencias absolutas de las categorias de las variables
+
+b <- 100*a/length(IMC$SEXO) #calcula las frecuencias porcentuales
+
+print(a)
+print(b)
+
+sal.sexo <- rbind(a,b) #combina las dos frecuencias en una ssalida
+rownames(sal.sexo) <- c('frec.abs','frec.porc') #asigna nombre a las filas de la salida
+colnames(sal.sexo) <- c('Femenino', 'Masculino') #asigna nombre a las columnas de la salida
+print(sal.sexo)
+```
+##Frecuencias en Categoria Peso
+```{r}
+pabs <- table(IMC$CatPeso)
+prel <- 100*pabs/length(IMC$CatPeso)
+sal.catpeso = rbind(pabs, prel)
+rownames(sal.catpeso) = c('frec.abs', 'frec.porc')
+cats <- levels(as.factor(IMC$CatPeso)) #devuelve las categorias ordenadas alfabeticamente
+print(cats)
+colnames(sal.catpeso) <- c('Deficiente', 'Normal', 'Obeso', 'Con sobrepeso')
+sal.catpeso
+sal.catpeso <- round(sal.catpeso, 2) #redondeo a 2 decimales
+sal.catpeso[, c(2,4,1,3)] #puedo indicar el orden en que quiero que aparezcan las columnas
+
+```
+##AGRUPANDO LAS FRECUENCIAS DE AMBAS VARIABLES
+```{r}
+dist.conj <- table(IMC$CatPeso,IMC$SEXO) #devuelve la distribución conjunta
+total <- apply(dist.conj, 2, sum) # calculo totales por sexo
+dist.porc <- 100*cbind(dist.conj[,1]/total[1],dist.conj[,2]/total[2]) #calcula la distribución porcentual por sexo
+dist.porc <- round(dist.porc,2)
+colnames(dist.porc) <- c('F(%)','M(%)')
+sal.conj <- cbind(dist.conj,dist.porc) #combina ambas distribuciones
+totales <- apply(sal.conj,2,sum) #calcula el total de cada columna
+sal.fin <- rbind(sal.conj, totales) #agrega una fila con los totales por columna
+
+print(sal.fin)
+
+```
+##MEDIDAS DE POSICION Y VARIABILIDAD
+```{r}
+library(modeest)
+imc.base <- cbind(IMC[,c(2,4:6,8)]) #arma una base seleccionando variables numericas de interes
+medias <- round(apply(imc.base,2,mean),2) #calcula las medias
+medianas <- round(apply(imc.base,2,median),2) #calcula las medianas
+varianzas <- round(apply(imc.base, 2, var), 2) #calcula las varianzas
+desv.standard <- round(apply(imc.base, 2, sd), 2) #calcula el desvío estándar
+resumenes <- rbind(medias, medianas, varianzas, desv.standard) #se junta en una sola tabla los resumenes
+
+print(resumenes)
+```
+##Calculo de Moda (Moda: valor mas frecuente de una variable)
+```{r}
+mfv(IMC$EDAD) #calcula la moda de edad
+
+```
+##Calculo de la Media podada
+```{r}
+Z <- imc.base[,3]
+meanZ <- mean(Z, trim = 0.1) #poda la media al 10%
+medianZ <- median(Z) #Calcula la mediana
+
+#comparo la media podada con la mediana
+print(meanZ)
+print(medianZ)
+
+
+```
+## Calculo de Cuantiles
+```{r}
+q75 <- quantile(Z, 0.75) #calcula el Cuantil 75%
+quantileZ <- quantile(IMC$EDAD,probs = seq(0,1,0.2)) #calcula los cuantiles en intervalos de 20%
+print(q75)
+print(quantileZ)
+```
+##DATOS FALTANTES o NULOS
+```{r}
+is.na(Z) # indica si faltan valores
+W <- Z
+W[1] <- NA #asigna un valor perdido en la primera componente del vector W
+is.na(W)
+
+mean(W) #devuelve error por el NA
+mean(W, na.rm=T) #no considera los valores nulos o perdidos
+
+```
+
+##ANALISIS DE VARIABLES DE ACUERDO a CATEGORIA PESO
+
+```{r}
+base.porpeso <- split(IMC[,c(2,4:6,8)], IMC$CatPeso) #Agrupa datos numericos y parte el dataset por las categorías de peso. El output es un listado donde cada elemento de la lista representa una tabla o matriz de los datos numéricos de IMC.
+defic <- as.data.frame(base.porpeso[1]) #Genero un dataframe a partir del split de 'Deficiente'
+normal <- as.data.frame(base.porpeso[2]) #Genero un dataframe a partir del split de 'Normal'
+obeso <- as.data.frame(base.porpeso[3]) #Genero un dataframe a partir del split de 'Obeso'
+sobrep <- as.data.frame(base.porpeso[4]) #Genero un dataframe a partir del split de 'Sobrepeso'
+
+print(base.porpeso) #al imprimir el elemento se puede ver el listado de tablas que generó
+```
+
+## Analisis sobre la poblacion con peso 'deficiente'
+
+```{r}
+summary.defic <- matrix(unlist(lapply(defic,"summary")),nrow = 5, ncol = 6, byrow = T) #Aplico la funcion summary sobre el dataset y extraigo en formato de matriz las medidas de posicion para las variables. El 'True' en el argumento de byrow permite que la matriz se complete por fila en vez de por columna.
+print(summary.defic)
+sd.defic <- round(unlist(lapply(defic,'sd')),2) #Aplico la funcion de desvio estandar, que no viene incluida en la funcion summary.
+print(sd.defic)
+
+salida.defic <- cbind(summary.defic[,4],sd.defic,summary.defic[,c(3,2,5)]) #Combina las dos salidas y reordena las columnas empezando por: la media, el desvio, la mediana, el 1er cuartil y el 3er cuartil
+colnames(salida.defic) <- c('MEDIA', 'SD','MEDIANA', 'Q1','Q3') #Asigno nombre a las columnas
+rownames(salida.defic) <- c('EDAD.D', 'PESO.D','TALLA.D', 'IMC.D','CC.D') #Asigno nombre a las filas en base al nombre de los atributos
+print(salida.defic)
+
+```
+
+
+## Notese el desvio de la variable circunferencia de cintura. Es mas grande que el rango intercuartil. Voy a graficar un boxplot con la variable para entender mejor su distribucion.
+
+
+```{r}
+boxplot(defic[,5])
+title(main = 'Distribucion Circunferencia de Cintura', sub = 'Datos obs. para la pob. con peso deficiente', xlab = 'Circunferencia de Cintura', ylab = 'Centimetros', col.sub = 'blue')
+```
+
+
+## Se detecta un outlier bastante llamativo. Se va a comparar contra el resto de los pesos observados.
+
+
+```{r}
+CC.porpeso <- list(defic[,5],normal[,5],sobrep[,5],obeso[,5]) #Genero un listado con los distintos 'tratamientos' para el atributo Circunferencia de Cintura
+
+names(CC.porpeso) <- c('Deficiente', 'Normal', 'Sobrepeso', 'Obeso') #Asigno un nombre de tratamiento a cada elemento de la lista de vectores
+print(CC.porpeso)
+```
+
+
+## Se corre un boxplot con todos los tratamientos de peso para comparar las distribuciones y entender la dimension que tiene el outlier del atributo en deficientes.
+
+
+```{r}
+boxplot(CC.porpeso)
+title(main = 'Distribucion Circunferencia de Cintura', sub = 'Datos obs. para la pob. agrupada por peso', xlab = 'Tratamiento Peso', ylab = 'Centimetros', col.sub = 'blue')
+```
+
+
+## Se ve que en obeso tambien hay un outlier extremo parecido al de deficiente. Seria necesario analizar con mayor profundidad para concluir en que los datos son malas mediciones y no simplemente muestras de casos muy puntuales.
